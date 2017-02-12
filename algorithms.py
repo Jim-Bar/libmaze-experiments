@@ -4,35 +4,19 @@ import sys
 from maze import Maze
 
 
-class RecursiveBackTracker(object):
+class Algorithm(object):
     """
-
+    Abstract class. All algorithm must override the methods of this class.
     """
 
     @staticmethod
     def run(width, height):
         # type: (int, int) -> Maze
 
-        maze = Maze(width, height, True, False)
-        sys.setrecursionlimit(width * height + 10)
-        RecursiveBackTracker._recursive(maze.cell(width // 2, height // 2))
-
-        return maze
-
-    @staticmethod
-    def _recursive(cell):
-        # type: (Cell) -> None
-
-        cell.set_meta(True)
-        directions = [direction for direction in Maze.Direction]
-        random.shuffle(directions)
-        for direction in directions:
-            if cell.has_neighbor(direction) and not cell.get_neighbor(direction).get_meta():
-                cell.open(direction)
-                RecursiveBackTracker._recursive(cell.get_neighbor(direction))
+        raise TypeError('Class {} is abstract'.format(Algorithm.__name__))
 
 
-class HuntAndKill(object):
+class HuntAndKill(Algorithm):
     """
 
     """
@@ -65,3 +49,31 @@ class HuntAndKill(object):
                 HuntAndKill._recursive(cell.get_neighbor(direction), starting_cells)
                 return
         starting_cells.remove(cell)
+
+
+class RecursiveBackTracker(Algorithm):
+    """
+
+    """
+
+    @staticmethod
+    def run(width, height):
+        # type: (int, int) -> Maze
+
+        maze = Maze(width, height, True, False)
+        sys.setrecursionlimit(width * height + 10)
+        RecursiveBackTracker._recursive(maze.cell(width // 2, height // 2))
+
+        return maze
+
+    @staticmethod
+    def _recursive(cell):
+        # type: (Cell) -> None
+
+        cell.set_meta(True)
+        directions = [direction for direction in Maze.Direction]
+        random.shuffle(directions)
+        for direction in directions:
+            if cell.has_neighbor(direction) and not cell.get_neighbor(direction).get_meta():
+                cell.open(direction)
+                RecursiveBackTracker._recursive(cell.get_neighbor(direction))
