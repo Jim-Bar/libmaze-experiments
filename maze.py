@@ -55,9 +55,7 @@ class Cell(object):
         # type: (Maze.Direction, Cell, bool) -> None
 
         if direction not in self._neighbors:
-            link = Link(is_open)
-            self._neighbors[direction] = (neighbor, link)
-            neighbor._neighbors[direction.opposite()] = (self, link)
+            self.replace_neighbor(direction, neighbor, is_open)
 
     def close(self, direction):
         # type: (Maze.Direction) -> None
@@ -88,6 +86,13 @@ class Cell(object):
         # type: (Maze.Direction) -> None
 
         self._neighbors[direction][1].open()
+
+    def replace_neighbor(self, direction, neighbor, is_open):
+        # type: (Maze.Direction, Cell, bool) -> None
+
+        link = Link(is_open)
+        self._neighbors[direction] = (neighbor, link)
+        neighbor._neighbors[direction.opposite()] = (self, link)
 
     def set_meta(self, meta):
         # type: (Any) -> None
@@ -133,8 +138,9 @@ class Maze(object):
             elif self is Maze.Direction.DOWN:
                 return Maze.Direction.UP
 
-    def __init__(self, width, height, carving, meta=None):
-        # type: (int, int, bool, Any) -> None
+    # TODO: Make a class out of 'sub_mazes'.
+    def __init__(self, width, height, carving, meta=None, sub_mazes=None):
+        # type: (int, int, bool, Any, List[Tuple[Maze, List[Tuple[int, int, Maze.Direction, bool]], Tuple[int, int]]]) -> None
 
         self._grid = [[Cell(x, y, meta) for y in range(height)] for x in range(width)]  # type: List[List[Cell]]
         self._width = width  # type: int
@@ -144,13 +150,44 @@ class Maze(object):
         for y in range(height):
             for x in range(width):
                 if x > 0:
-                    self._grid[x][y].add_neighbor(Maze.Direction.LEFT, self._grid[x - 1][y], not carving)
+                    self.cell(x, y).add_neighbor(Maze.Direction.LEFT, self.cell(x - 1, y), not carving)
                 if y > 0:
-                    self._grid[x][y].add_neighbor(Maze.Direction.UP, self._grid[x][y - 1], not carving)
-                if x < self._width - 1:
-                    self._grid[x][y].add_neighbor(Maze.Direction.RIGHT, self._grid[x + 1][y], not carving)
-                if y < self._height - 1:
-                    self._grid[x][y].add_neighbor(Maze.Direction.DOWN, self._grid[x][y + 1], not carving)
+                    self.cell(x, y).add_neighbor(Maze.Direction.UP, self.cell(x, y - 1), not carving)
+                if x < self.width() - 1:
+                    self.cell(x, y).add_neighbor(Maze.Direction.RIGHT, self.cell(x + 1, y), not carving)
+                if y < self.height() - 1:
+                    self.cell(x, y).add_neighbor(Maze.Direction.DOWN, self.cell(x, y + 1), not carving)
+
+        # Insert sub mazes if there are some.
+        if sub_mazes is None:
+            sub_mazes = list()
+        for sub_maze, special_cases, (sub_x, sub_y) in sub_mazes:
+            for y in range(sub_maze.height()):
+                for x in range(sub_maze.width()):
+                    abs_x = sub_x + x
+                    abs_y = sub_y + y
+                    self._grid[abs_x][abs_y] = sub_maze.cell(x, y)
+
+                    # Reconnect adjacent cells.
+                    if abs_x > 0 and x is 0:
+                        self.cell(abs_x, abs_y).replace_neighbor(Maze.Direction.LEFT,
+                                                                 self.cell(abs_x - 1, abs_y), not carving)
+                    if abs_y > 0 and y is 0:
+                        self.cell(abs_x, abs_y).replace_neighbor(Maze.Direction.UP,
+                                                                 self.cell(abs_x, abs_y - 1), not carving)
+                    if abs_x < self.width() - 1 and x is sub_maze.width() - 1:
+                        self.cell(abs_x, abs_y).replace_neighbor(Maze.Direction.RIGHT,
+                                                                 self.cell(abs_x + 1, abs_y), not carving)
+                    if abs_y < self.height() - 1 and y is sub_maze.height() - 1:
+                        self.cell(abs_x, abs_y).replace_neighbor(Maze.Direction.DOWN,
+                                                                 self.cell(abs_x, abs_y + 1), not carving)
+
+            # Open or close some cells in some directions.
+            for x, y, direction, is_open in special_cases:
+                if is_open:
+                    sub_maze.cell(x, y).open(direction)
+                else:
+                    sub_maze.cell(x, y).close(direction)
 
     def cell(self, x, y):
         # type: (int, int) -> Cell

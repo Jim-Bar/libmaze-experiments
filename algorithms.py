@@ -9,27 +9,28 @@ class Algorithm(object):
     Abstract class. All algorithm must override the methods of this class.
     """
 
+    # TODO: Make a class out of 'parameters'.
     @staticmethod
-    def run(width, height):
-        # type: (int, int) -> Maze
+    def run(width, height, parameters=None):
+        # type: (int, int, Any) -> Maze
 
-        raise TypeError('Class {} is abstract'.format(Algorithm.__name__))
+        raise NotImplementedError('Class {} is abstract'.format(Algorithm.__name__))
 
 
 class HuntAndKill(Algorithm):
     """
-    Variation of the Hunt and Kill algorithm. When a path is complete, instead of looking for starting a new one from
-    the top left, start from a random location on the part of the maze already built.
+    Variation of the Hunt and Kill algorithm. When a path is complete, instead of looking from the top left for starting
+    a new one, start from a random location on the part of the maze already built.
     """
 
     @staticmethod
-    def run(width, height):
-        # type: (int, int) -> Maze
+    def run(width, height, parameters=None):
+        # type: (int, int, Any) -> Maze
 
         maze = Maze(width, height, True, False)
-        sys.setrecursionlimit(width * height + 10)
+        sys.setrecursionlimit(max(sys.getrecursionlimit(), width * height + 10))
         starting_cells = set()
-        HuntAndKill._recursive(maze.cell(width // 2, height // 2), starting_cells)
+        HuntAndKill._recursive(maze.cell(random.randrange(width), random.randrange(height)), starting_cells)
         while starting_cells:
             next_cell = starting_cells.pop()
             HuntAndKill._recursive(next_cell, starting_cells)
@@ -52,18 +53,51 @@ class HuntAndKill(Algorithm):
         starting_cells.remove(cell)
 
 
+class Labyrinth(Algorithm):
+    """
+    Create a long single path which fills all the space.
+    """
+
+    @staticmethod
+    def run(width, height, parameters=None):
+        # type: (int, int, Any) -> Maze
+
+        maze = Maze(width, height, True, False)
+        cell = maze.cell(0, 0)
+        cell.set_meta(True)
+        done = False
+        while not done:
+            done = True
+            for direction in Maze.Direction:
+                if cell.has_neighbor(direction) and not cell.get_neighbor(direction).get_meta():
+                    cell.open(direction)
+                    cell = cell.get_neighbor(direction)
+                    cell.set_meta(True)
+                    done = False
+                    break
+
+        return maze
+
+
 class RecursiveBackTracker(Algorithm):
     """
     The original Recursive Back Tracker algorithm.
     """
 
     @staticmethod
-    def run(width, height):
-        # type: (int, int) -> Maze
+    def run(width, height, parameters=None):
+        # type: (int, int, Any) -> Maze
 
-        maze = Maze(width, height, True, False)
-        sys.setrecursionlimit(width * height + 10)
-        RecursiveBackTracker._recursive(maze.cell(width // 2, height // 2))
+        sys.setrecursionlimit(max(sys.getrecursionlimit(), width * height + 10))
+
+        if parameters:
+            maze = parameters[0]
+            initial_cell = maze.cell(parameters[1][0], parameters[1][1])
+        else:
+            maze = Maze(width, height, True, False)
+            initial_cell = maze.cell(random.randrange(width), random.randrange(height))
+
+        RecursiveBackTracker._recursive(initial_cell)
 
         return maze
 
@@ -78,3 +112,15 @@ class RecursiveBackTracker(Algorithm):
             if cell.has_neighbor(direction) and not cell.get_neighbor(direction).get_meta():
                 cell.open(direction)
                 RecursiveBackTracker._recursive(cell.get_neighbor(direction))
+
+
+class Room(Algorithm):
+    """
+    An empty maze, no walls excepted the surrounding walls (and maybe the pillars depending on the rendering engine).
+    """
+
+    @staticmethod
+    def run(width, height, parameters=None):
+        # type: (int, int, Any) -> Maze
+
+        return Maze(width, height, False, True)
