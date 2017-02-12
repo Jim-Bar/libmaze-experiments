@@ -3,6 +3,11 @@ import sys
 
 from maze import Maze
 
+try:
+    from typing import Any, Callable, Dict, List, Set, Tuple
+except ImportError:
+    Any, Callable, Dict, List, Set, Tuple = None, None, None, None, None, None
+
 
 class Algorithm(object):
     """
