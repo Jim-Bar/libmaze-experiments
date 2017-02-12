@@ -1,11 +1,9 @@
 import enum
-import random
-import sys
 
 try:
-    from typing import Any, Callable, Dict, List, Tuple
+    from typing import Any, Callable, Dict, List, Set, Tuple
 except ImportError:
-    Any, Callable, Dict, List, Tuple = None, None, None, None, None
+    Any, Callable, Dict, List, Set, Tuple = None, None, None, None, None, None
 
 
 class Link(object):
@@ -46,6 +44,11 @@ class Cell(object):
         self._y = y  # type: int
         self._meta = meta  # type: Any
         self._neighbors = dict()  # type: Dict[Maze.Direction, Tuple[Cell, Link]]
+
+    def __str__(self):
+        # type: () -> str
+
+        return '({}, {})'.format(self._x, self._y)
 
     def add_neighbor(self, direction, neighbor, is_open):
         # type: (Maze.Direction, Cell, bool) -> None
@@ -153,6 +156,28 @@ class Maze(object):
 
         return self._grid[x][y]
 
+    def export(self, file_name):
+        # type: (str) -> None
+
+        maze_representation = ''
+        for y in range(self.height()):
+            for x in range(self.width()):
+                value = 0
+                if self.cell(x, y).has_neighbor(Maze.Direction.LEFT) and self.cell(x, y).is_open(Maze.Direction.LEFT):
+                    value |= 1
+                if self.cell(x, y).has_neighbor(Maze.Direction.TOP) and self.cell(x, y).is_open(Maze.Direction.TOP):
+                    value |= 2
+                if self.cell(x, y).has_neighbor(Maze.Direction.RIGHT) and self.cell(x, y).is_open(Maze.Direction.RIGHT):
+                    value |= 4
+                if self.cell(x, y).has_neighbor(Maze.Direction.BOTTOM) and self.cell(x, y).is_open(
+                        Maze.Direction.BOTTOM):
+                    value |= 8
+                maze_representation += '{} '.format(value)
+            maze_representation += '\n'
+
+        with open(file_name, 'w') as maze_file:
+            maze_file.write(maze_representation)
+
     def height(self):
         # type: () -> int
 
@@ -162,61 +187,3 @@ class Maze(object):
         # type: () -> int
 
         return self._width
-
-
-class RecursiveBackTracker(object):
-    """
-
-    """
-
-    @staticmethod
-    def run(width, height):
-        # type: (int, int) -> Maze
-
-        maze = Maze(width, height, True, False)
-        sys.setrecursionlimit(width * height + 10)
-        RecursiveBackTracker.recursive(maze.cell(width // 2, height //2))
-
-        return maze
-
-    @staticmethod
-    def recursive(cell):
-        # type: (Cell) -> None
-
-        cell.set_meta(True)
-        directions = [direction for direction in Maze.Direction]
-        random.shuffle(directions)
-        for direction in directions:
-            if cell.has_neighbor(direction) and not cell.get_neighbor(direction).get_meta():
-                cell.open(direction)
-                RecursiveBackTracker.recursive(cell.get_neighbor(direction))
-
-
-class MazeExporter(object):
-    """
-
-    """
-
-    @staticmethod
-    def export(maze):
-        # type: (Maze) -> None
-
-        maze_representation = ''
-        for y in range(maze.height()):
-            for x in range(maze.width()):
-                value = 0
-                if maze.cell(x, y).has_neighbor(Maze.Direction.LEFT) and maze.cell(x, y).is_open(Maze.Direction.LEFT):
-                    value |= 1
-                if maze.cell(x, y).has_neighbor(Maze.Direction.TOP) and maze.cell(x, y).is_open(Maze.Direction.TOP):
-                    value |= 2
-                if maze.cell(x, y).has_neighbor(Maze.Direction.RIGHT) and maze.cell(x, y).is_open(Maze.Direction.RIGHT):
-                    value |= 4
-                if maze.cell(x, y).has_neighbor(Maze.Direction.BOTTOM) and maze.cell(x, y).is_open(Maze.Direction.BOTTOM):
-                    value |= 8
-                maze_representation += '{} '.format(value)
-            maze_representation += '\n'
-
-        with open('maze.txt', 'w') as maze_file:
-            maze_file.write(maze_representation)
-
-MazeExporter.export(RecursiveBackTracker.run(50, 25))

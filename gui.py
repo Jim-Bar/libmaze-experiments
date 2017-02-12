@@ -37,7 +37,7 @@ def fill_with_color(pixels, average_color, i, j, w, h):
 width = width * 2 + 1
 height = height * 2 + 1
 
-square_size = 2
+square_size = 5
 img_dst = Image.new('RGB', (width * square_size, height * square_size))
 pixels_dst = img_dst.load()
 
@@ -46,6 +46,6 @@ for i in range(width):
         if maze[i][j] is 0:
             fill_with_color(pixels_dst, (255, 255, 255), i * square_size, j * square_size, square_size, square_size)
         else:
-            fill_with_color(pixels_dst, (0, 255, 0), i * square_size, j * square_size, square_size, square_size)
+            fill_with_color(pixels_dst, (128, 128, 128), i * square_size, j * square_size, square_size, square_size)
 
 img_dst.show()
