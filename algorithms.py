@@ -18,7 +18,8 @@ class Algorithm(object):
 
 class HuntAndKill(Algorithm):
     """
-
+    Variation of the Hunt and Kill algorithm. When a path is complete, instead of looking for starting a new one from
+    the top left, start from a random location on the part of the maze already built.
     """
 
     @staticmethod
@@ -53,7 +54,7 @@ class HuntAndKill(Algorithm):
 
 class RecursiveBackTracker(Algorithm):
     """
-
+    The original Recursive Back Tracker algorithm.
     """
 
     @staticmethod

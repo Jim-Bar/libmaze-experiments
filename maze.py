@@ -8,7 +8,7 @@ except ImportError:
 
 class Link(object):
     """
-
+    Link between two adjacent cells. A link is either a wall or a passage.
     """
 
     def __init__(self, is_open):
@@ -34,7 +34,8 @@ class Link(object):
 
 class Cell(object):
     """
-
+    Each cell is a square in the maze. Cells are separated by walls or passages (i.e. links). Cells have a field 'meta'
+    which can be used by algorithms for stored arbitrary data about this cell.
     """
 
     def __init__(self, x, y, meta):
@@ -106,7 +107,7 @@ class Cell(object):
 
 class Maze(object):
     """
-
+    A maze composed of cells.
     """
 
     @enum.unique
@@ -116,21 +117,21 @@ class Maze(object):
         """
 
         LEFT = 1
-        TOP = 2
+        UP = 2
         RIGHT = 3
-        BOTTOM = 4
+        DOWN = 4
 
         def opposite(self):
             # type: (Maze.Direction) -> Maze.Direction
 
             if self is Maze.Direction.LEFT:
                 return Maze.Direction.RIGHT
-            elif self is Maze.Direction.TOP:
-                return Maze.Direction.BOTTOM
+            elif self is Maze.Direction.UP:
+                return Maze.Direction.DOWN
             elif self is Maze.Direction.RIGHT:
                 return Maze.Direction.LEFT
-            elif self is Maze.Direction.BOTTOM:
-                return Maze.Direction.TOP
+            elif self is Maze.Direction.DOWN:
+                return Maze.Direction.UP
 
     def __init__(self, width, height, carving, meta=None):
         # type: (int, int, bool, Any) -> None
@@ -145,11 +146,11 @@ class Maze(object):
                 if x > 0:
                     self._grid[x][y].add_neighbor(Maze.Direction.LEFT, self._grid[x - 1][y], not carving)
                 if y > 0:
-                    self._grid[x][y].add_neighbor(Maze.Direction.TOP, self._grid[x][y - 1], not carving)
+                    self._grid[x][y].add_neighbor(Maze.Direction.UP, self._grid[x][y - 1], not carving)
                 if x < self._width - 1:
                     self._grid[x][y].add_neighbor(Maze.Direction.RIGHT, self._grid[x + 1][y], not carving)
                 if y < self._height - 1:
-                    self._grid[x][y].add_neighbor(Maze.Direction.BOTTOM, self._grid[x][y + 1], not carving)
+                    self._grid[x][y].add_neighbor(Maze.Direction.DOWN, self._grid[x][y + 1], not carving)
 
     def cell(self, x, y):
         # type: (int, int) -> Cell
@@ -165,12 +166,11 @@ class Maze(object):
                 value = 0
                 if self.cell(x, y).has_neighbor(Maze.Direction.LEFT) and self.cell(x, y).is_open(Maze.Direction.LEFT):
                     value |= 1
-                if self.cell(x, y).has_neighbor(Maze.Direction.TOP) and self.cell(x, y).is_open(Maze.Direction.TOP):
+                if self.cell(x, y).has_neighbor(Maze.Direction.UP) and self.cell(x, y).is_open(Maze.Direction.UP):
                     value |= 2
                 if self.cell(x, y).has_neighbor(Maze.Direction.RIGHT) and self.cell(x, y).is_open(Maze.Direction.RIGHT):
                     value |= 4
-                if self.cell(x, y).has_neighbor(Maze.Direction.BOTTOM) and self.cell(x, y).is_open(
-                        Maze.Direction.BOTTOM):
+                if self.cell(x, y).has_neighbor(Maze.Direction.DOWN) and self.cell(x, y).is_open(Maze.Direction.DOWN):
                     value |= 8
                 maze_representation += '{} '.format(value)
             maze_representation += '\n'
