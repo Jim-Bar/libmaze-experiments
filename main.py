@@ -3,8 +3,8 @@ from gui import Renderer
 from maze import Maze
 
 output_file_name = 'maze.txt'
-width = 192
-height = 108
+width = 239
+height = 134
 choice = 5
 
 if choice is 1:
@@ -35,4 +35,4 @@ else:
 
 maze.export(output_file_name)
 
-Renderer.render(maze, 5)
+Renderer.render(maze, 4)
