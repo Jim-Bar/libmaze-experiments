@@ -74,8 +74,14 @@ class Labyrinth(Algorithm):
     def run(width, height, parameters=None):
         # type: (int, int, Any) -> Maze
 
-        maze = Maze(width, height, True, False)
-        cell = maze.cell(0, 0)
+        if parameters:
+            maze = parameters[0]
+            initial_cell = maze.cell(parameters[1][0], parameters[1][1])
+        else:
+            maze = Maze(width, height, True, False)
+            initial_cell = maze.cell(random.randrange(width), random.randrange(height))
+
+        cell = initial_cell
         cell.set_meta(True)
         done = False
         while not done:
