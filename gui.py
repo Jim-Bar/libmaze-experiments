@@ -1,4 +1,5 @@
 import pyglet
+import random
 
 from maze import Maze
 
@@ -13,96 +14,98 @@ class Renderer(object):
     Render a maze so that one can solve it!
     """
 
-    @staticmethod
-    def render(maze, cells_size):
-        # type: (Maze, int) -> None
+    def __init__(self, maze, cells_size, num_initial_cells):
+        # type: (Maze, int, int) -> None
 
-        window = pyglet.window.Window(fullscreen=True)
+        self._window = pyglet.window.Window(fullscreen=True)  # type: pyglet.window.Window
+        self._cells_size = cells_size  # type: int
+        self._width = maze.width() * 2 + 1  # type: int
+        self._height = maze.height() * 2 + 1  # type: int
+        self._drawn_width = self._width * cells_size  # type: int
+        self._drawn_height = self._height * cells_size  # type: int
+        self._origin = (self._window.width // 2 - self._drawn_width // 2,
+                        self._window.height // 2 - self._drawn_height // 2)  # type: Tuple[int, int]
+        self._maze = maze.develop()  # type: List[List[int]]
+        self._batch = pyglet.graphics.Batch()  # type: pyglet.graphics.Batch
 
-        width = maze.width() * 2 + 1
-        height = maze.height() * 2 + 1
-        drawn_width = width * cells_size
-        drawn_height = height * cells_size
-        origin_x = window.width // 2 - drawn_width // 2
-        origin_y = window.height // 2 - drawn_height // 2
-        maze = maze.develop()
-        batch = pyglet.graphics.Batch()
-        for y in range(height):
-            for x in range(width):
-                if maze[x][y] is 0:
-                    Renderer._add_cell(batch, cells_size, x, y, (255, 255, 255), height, origin_x, origin_y)
-                else:
-                    Renderer._add_cell(batch, cells_size, x, y, (0, 0, 0), height, origin_x, origin_y)
+        # Pick random cells.
+        self._frontier = set()  # type: Set[Tuple[int, int]]
+        for i in range(num_initial_cells):
+            self._frontier.add((random.randrange(1, self._width, 2), random.randrange(1, self._height, 2)))
 
-        @window.event
+        # Pick a random color.
+        color = [random.randint(0, 255), 0, 255]
+        random.shuffle(color)
+        self._color = tuple(color)  # type: Tuple[int, int, int]
+
+    def run(self):
+        # type: () -> None
+
+        @self._window.event
         def on_draw():
             # type: () -> None
 
-            window.clear()
-            batch.draw()
+            self._window.clear()
+            self._batch.draw()
 
-        @window.event
+        @self._window.event
         def on_key_press(symbol, _):
             # type: (Any, Any) -> None
 
             if symbol == pyglet.window.key.ESCAPE or symbol == pyglet.window.key.Q:
-                window.close()
+                self._window.close()
 
-        Renderer._flood(maze, width, height, cells_size, batch, origin_x, origin_y)
+        pyglet.clock.schedule_interval(self._flood, 1 / 60)
         pyglet.app.run()
 
-    @staticmethod
-    def _add_cell(batch, size, x, y, color, height, origin_x, origin_y):
-        # type: (Any, int, int, int, Tuple[int, int, int], int, int, int) -> None
+    def _add_cell(self, x, y):
+        # type: (int, int) -> None
 
         # Put the origin to the top left (reverse Y-axis).
-        y = height - y
-        vertices = tuple(n * size for n in (x, y, x + 1, y, x + 1, y - 1, x, y - 1))
-        origin = (origin_x, origin_y, origin_x, origin_y, origin_x, origin_y, origin_x, origin_y)
+        y = self._height - y
+        vertices = tuple(n * self._cells_size for n in (x, y, x + 1, y, x + 1, y - 1, x, y - 1))
+        origin = (self._origin[0], self._origin[1], self._origin[0], self._origin[1], self._origin[0], self._origin[1],
+                  self._origin[0], self._origin[1])
         vertices = tuple(map(sum, zip(vertices, origin)))
 
-        batch.add(4, pyglet.gl.GL_QUADS, None,
-                  ('v2i', vertices), ('c3B', color * 4))
+        self._batch.add(4, pyglet.gl.GL_QUADS, None, ('v2i', vertices), ('c3B', self._color * 4))
 
-    @staticmethod
-    def _flood(maze, width, height, cells_size, batch, origin_x, origin_y):
-        # type: (List[List[int]], int, int, int, Any, int, int) -> None
+    def _flood(self, _):
+        # type: (float) -> None
 
-        color = (255, 0, 0)
-        cells = [(1, 1)]
+        if self._frontier:
+            next_cells = set()
+            for x, y in self._frontier:
+                self._maze[x][y] = 1
+                self._add_cell(x, y)
+                if x > 0 and self._maze[x - 1][y] is 0:
+                    next_cells.add((x - 1, y))
+                if x < self._width - 1 and self._maze[x + 1][y] is 0:
+                    next_cells.add((x + 1, y))
+                if y > 0 and self._maze[x][y - 1] is 0:
+                    next_cells.add((x, y - 1))
+                if y < self._height - 1 and self._maze[x][y + 1] is 0:
+                    next_cells.add((x, y + 1))
+            self._frontier = next_cells
+            self._next_color()
+        else:
+            pyglet.clock.unschedule(self._flood)
 
-        while cells:
-            next_cells = list()
-            for x, y in cells:
-                maze[x][y] = color
-                Renderer._add_cell(batch, cells_size, x, y, color, height, origin_x, origin_y)
-                if x > 0 and maze[x - 1][y] is 0:
-                    next_cells.append((x - 1, y))
-                if x < width - 1 and maze[x + 1][y] is 0:
-                    next_cells.append((x + 1, y))
-                if y > 0 and maze[x][y - 1] is 0:
-                    next_cells.append((x, y - 1))
-                if y < height -1 and maze[x][y + 1] is 0:
-                    next_cells.append((x, y + 1))
-            cells = next_cells
-            color = Renderer._next_color(color)
+    def _next_color(self):
+        # type: () -> None
 
-    @staticmethod
-    def _next_color(color):
-        # type: (Tuple[int, int, int]) -> Tuple[int, int, int]
-
-        red, green, blue = color
+        red, green, blue = self._color
         if red is 255 and green is 0 and blue < 255:
-            return red, green, blue + 1
-        if red > 0 and green is 0 and blue is 255:
-            return red - 1, green, blue
-        if red is 0 and green < 255 and blue is 255:
-            return red, green + 1, blue
-        if red is 0 and green is 255 and blue > 0:
-            return red, green, blue - 1
-        if red < 255 and green is 255 and blue is 0:
-            return red + 1, green, blue
-        if red is 255 and green > 0 and blue is 0:
-            return red, green - 1, blue
-
-        raise RuntimeError('Flaws in "_next_color()"')
+            self._color = red, green, blue + 1
+        elif red > 0 and green is 0 and blue is 255:
+            self._color = red - 1, green, blue
+        elif red is 0 and green < 255 and blue is 255:
+            self._color = red, green + 1, blue
+        elif red is 0 and green is 255 and blue > 0:
+            self._color = red, green, blue - 1
+        elif red < 255 and green is 255 and blue is 0:
+            self._color = red + 1, green, blue
+        elif red is 255 and green > 0 and blue is 0:
+            self._color = red, green - 1, blue
+        else:
+            raise RuntimeError('Invalid color ({}, {}, {}). RGB == {{0, 255, n}}'.format(red, green, blue))
