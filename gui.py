@@ -34,7 +34,7 @@ class Renderer(object):
         else:
             walls = 1
             spaces = 0
-        self._maze = maze.develop(spaces, walls)  # type: List[List[int]]
+        self._maze = maze.export_to_full_grid(spaces, walls)  # type: List[List[int]]
 
         # Pick random cells.
         self._frontier = set()  # type: Set[Tuple[int, int]]

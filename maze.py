@@ -194,41 +194,38 @@ class Maze(object):
 
         return self._grid[x][y]
 
-    def develop(self, spaces, walls):
+    def export_to_full_grid(self, spaces, walls):
         # type: (Any, Any) -> List[List[int]]
 
-        developed_maze = [[walls for _ in range(self.height() * 2 + 1)] for _ in range(self.width() * 2 + 1)]
+        exported_maze = [[walls for _ in range(self.height() * 2 + 1)] for _ in range(self.width() * 2 + 1)]
 
         for x in range(self.width()):
             for y in range(self.height()):
-                developed_maze[x * 2 + 1][y * 2 + 1] = spaces
+                exported_maze[x * 2 + 1][y * 2 + 1] = spaces
                 if self.cell(x, y).has_neighbor(Maze.Direction.RIGHT) and self.cell(x, y).is_open(Maze.Direction.RIGHT):
-                    developed_maze[x * 2 + 2][y * 2 + 1] = spaces
+                    exported_maze[x * 2 + 2][y * 2 + 1] = spaces
                 if self.cell(x, y).has_neighbor(Maze.Direction.DOWN) and self.cell(x, y).is_open(Maze.Direction.DOWN):
-                    developed_maze[x * 2 + 1][y * 2 + 2] = spaces
+                    exported_maze[x * 2 + 1][y * 2 + 2] = spaces
 
-        return developed_maze
+        return exported_maze
 
-    def export(self, file_name):
-        # type: (str) -> None
+    def export_to_bits(self):
+        # type: () -> List[List[int]]
 
-        maze_representation = ''
+        exported_maze = [[0 for _ in range(self.height())] for _ in range(self.width())]
+
         for y in range(self.height()):
             for x in range(self.width()):
-                value = 0
                 if self.cell(x, y).has_neighbor(Maze.Direction.LEFT) and self.cell(x, y).is_open(Maze.Direction.LEFT):
-                    value |= 1
+                    exported_maze[x][y] |= 1
                 if self.cell(x, y).has_neighbor(Maze.Direction.UP) and self.cell(x, y).is_open(Maze.Direction.UP):
-                    value |= 2
+                    exported_maze[x][y] |= 2
                 if self.cell(x, y).has_neighbor(Maze.Direction.RIGHT) and self.cell(x, y).is_open(Maze.Direction.RIGHT):
-                    value |= 4
+                    exported_maze[x][y] |= 4
                 if self.cell(x, y).has_neighbor(Maze.Direction.DOWN) and self.cell(x, y).is_open(Maze.Direction.DOWN):
-                    value |= 8
-                maze_representation += '{} '.format(value)
-            maze_representation += '\n'
+                    exported_maze[x][y] |= 8
 
-        with open(file_name, 'w') as maze_file:
-            maze_file.write(maze_representation)
+        return exported_maze
 
     def height(self):
         # type: () -> int

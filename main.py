@@ -33,6 +33,4 @@ elif choice is 5:
 else:
     raise RuntimeError('You stupid!')
 
-maze.export(output_file_name)
-
 Renderer(maze, 4, 4, True).run()
