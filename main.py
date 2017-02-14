@@ -35,4 +35,4 @@ else:
 
 maze.export(output_file_name)
 
-Renderer(maze, 4, 4).run()
+Renderer(maze, 4, 4, True).run()

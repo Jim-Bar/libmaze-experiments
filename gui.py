@@ -14,8 +14,8 @@ class Renderer(object):
     Render a maze so that one can solve it!
     """
 
-    def __init__(self, maze, cells_size, num_initial_cells):
-        # type: (Maze, int, int) -> None
+    def __init__(self, maze, cells_size, num_initial_cells, color_walls):
+        # type: (Maze, int, int, bool) -> None
 
         self._window = pyglet.window.Window(fullscreen=True)  # type: pyglet.window.Window
         self._cells_size = cells_size  # type: int
@@ -25,13 +25,21 @@ class Renderer(object):
         self._drawn_height = self._height * cells_size  # type: int
         self._origin = (self._window.width // 2 - self._drawn_width // 2,
                         self._window.height // 2 - self._drawn_height // 2)  # type: Tuple[int, int]
-        self._maze = maze.develop()  # type: List[List[int]]
         self._batch = pyglet.graphics.Batch()  # type: pyglet.graphics.Batch
+
+        # Color walls or spaces.
+        if color_walls:
+            walls = 0
+            spaces = 1
+        else:
+            walls = 1
+            spaces = 0
+        self._maze = maze.develop(spaces, walls)  # type: List[List[int]]
 
         # Pick random cells.
         self._frontier = set()  # type: Set[Tuple[int, int]]
         for i in range(num_initial_cells):
-            self._frontier.add((random.randrange(1, self._width, 2), random.randrange(1, self._height, 2)))
+            self._frontier.add((random.randrange(walls, self._width, 2), random.randrange(walls, self._height, 2)))
 
         # Pick a random color.
         color = [random.randint(0, 255), 0, 255]

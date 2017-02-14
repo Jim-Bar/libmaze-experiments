@@ -194,18 +194,18 @@ class Maze(object):
 
         return self._grid[x][y]
 
-    def develop(self):
-        # type: () -> List[List[int]]
+    def develop(self, spaces, walls):
+        # type: (Any, Any) -> List[List[int]]
 
-        developed_maze = [[1 for _ in range(self.height() * 2 + 1)] for _ in range(self.width() * 2 + 1)]
+        developed_maze = [[walls for _ in range(self.height() * 2 + 1)] for _ in range(self.width() * 2 + 1)]
 
         for x in range(self.width()):
             for y in range(self.height()):
-                developed_maze[x * 2 + 1][y * 2 + 1] = 0
+                developed_maze[x * 2 + 1][y * 2 + 1] = spaces
                 if self.cell(x, y).has_neighbor(Maze.Direction.RIGHT) and self.cell(x, y).is_open(Maze.Direction.RIGHT):
-                    developed_maze[x * 2 + 2][y * 2 + 1] = 0
+                    developed_maze[x * 2 + 2][y * 2 + 1] = spaces
                 if self.cell(x, y).has_neighbor(Maze.Direction.DOWN) and self.cell(x, y).is_open(Maze.Direction.DOWN):
-                    developed_maze[x * 2 + 1][y * 2 + 2] = 0
+                    developed_maze[x * 2 + 1][y * 2 + 2] = spaces
 
         return developed_maze
 
