@@ -32,10 +32,17 @@ class HuntAndKill(Algorithm):
     def run(width, height, parameters=None):
         # type: (int, int, Any) -> Maze
 
-        maze = Maze(width, height, True, False)
         sys.setrecursionlimit(max(sys.getrecursionlimit(), width * height + 10))
+
+        if parameters:
+            maze = parameters[0]
+            initial_cell = maze.cell(parameters[1][0], parameters[1][1])
+        else:
+            maze = Maze(width, height, True, False)
+            initial_cell = maze.cell(random.randrange(width), random.randrange(height))
+
         starting_cells = set()
-        HuntAndKill._recursive(maze.cell(random.randrange(width), random.randrange(height)), starting_cells)
+        HuntAndKill._recursive(initial_cell, starting_cells)
         while starting_cells:
             next_cell = starting_cells.pop()
             HuntAndKill._recursive(next_cell, starting_cells)
