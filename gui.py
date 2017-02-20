@@ -1,3 +1,4 @@
+import enum
 import pyglet
 import random
 
@@ -14,17 +15,29 @@ class Renderer(object):
     Render a maze so that one can solve it!
     """
 
-    def __init__(self, maze, cells_size, num_initial_cells, color_walls):
-        # type: (Maze, int, int, bool) -> None
+    class ColorTransition(enum.Enum):
+        """
+        How the colors variate.
+        """
+
+        HUE = 1,
+        HUE_0_5 = 2,
+        HUE_2 = 3,
+        HUE_10 = 4,
+        RANDOM = 5
+
+    def __init__(self, maze, cells_size, num_initial_cells, color_walls, color_transition):
+        # type: (Maze, int, int, bool, Renderer.ColorTransition) -> None
 
         self._window = pyglet.window.Window(fullscreen=True)  # type: pyglet.window.Window
         self._cells_size = cells_size  # type: int
+        self._color_transition = color_transition  # type: Renderer.ColorTransition
         self._width = maze.width() * 2 + 1  # type: int
         self._height = maze.height() * 2 + 1  # type: int
-        self._drawn_width = self._width * cells_size  # type: int
-        self._drawn_height = self._height * cells_size  # type: int
-        self._origin = (self._window.width // 2 - self._drawn_width // 2,
-                        self._window.height // 2 - self._drawn_height // 2)  # type: Tuple[int, int]
+        drawn_width = self._width * cells_size  # type: int
+        drawn_height = self._height * cells_size  # type: int
+        self._origin = (self._window.width // 2 - drawn_width // 2,
+                        self._window.height // 2 - drawn_height // 2)  # type: Tuple[int, int]
         self._batch = pyglet.graphics.Batch()  # type: pyglet.graphics.Batch
 
         # Color walls or spaces.
@@ -53,6 +66,7 @@ class Renderer(object):
         def on_draw():
             # type: () -> None
 
+            # TODO: Clear to white or black.
             self._window.clear()
             self._batch.draw()
 
@@ -102,18 +116,35 @@ class Renderer(object):
     def _next_color(self):
         # type: () -> None
 
-        red, green, blue = self._color
-        if red is 255 and green is 0 and blue < 255:
-            self._color = red, green, blue + 1
-        elif red > 0 and green is 0 and blue is 255:
-            self._color = red - 1, green, blue
-        elif red is 0 and green < 255 and blue is 255:
-            self._color = red, green + 1, blue
-        elif red is 0 and green is 255 and blue > 0:
-            self._color = red, green, blue - 1
-        elif red < 255 and green is 255 and blue is 0:
-            self._color = red + 1, green, blue
-        elif red is 255 and green > 0 and blue is 0:
-            self._color = red, green - 1, blue
+        if self._color_transition in {Renderer.ColorTransition.HUE, Renderer.ColorTransition.HUE_0_5,
+                                      Renderer.ColorTransition.HUE_2, Renderer.ColorTransition.HUE_10}:
+            if self._color_transition is Renderer.ColorTransition.HUE_0_5 and random.randint(0, 1) is 0:
+                return  # Average is one of two.
+
+            if self._color_transition is Renderer.ColorTransition.HUE_10:
+                num_iterations = 10
+            elif self._color_transition is Renderer.ColorTransition.HUE_2:
+                num_iterations = 2
+            else:
+                num_iterations = 1
+
+            for _ in range(0, num_iterations):
+                red, green, blue = self._color
+                if red is 255 and green is 0 and blue < 255:
+                    self._color = red, green, blue + 1
+                elif red > 0 and green is 0 and blue is 255:
+                    self._color = red - 1, green, blue
+                elif red is 0 and green < 255 and blue is 255:
+                    self._color = red, green + 1, blue
+                elif red is 0 and green is 255 and blue > 0:
+                    self._color = red, green, blue - 1
+                elif red < 255 and green is 255 and blue is 0:
+                    self._color = red + 1, green, blue
+                elif red is 255 and green > 0 and blue is 0:
+                    self._color = red, green - 1, blue
+                else:
+                    raise RuntimeError('Invalid color ({}, {}, {}). RGB == {{0, 255, n}}'.format(red, green, blue))
+        elif self._color_transition is Renderer.ColorTransition.RANDOM:
+            self._color = random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)
         else:
-            raise RuntimeError('Invalid color ({}, {}, {}). RGB == {{0, 255, n}}'.format(red, green, blue))
+            raise RuntimeError('Invalid color transition {}'.format(self._color_transition))
