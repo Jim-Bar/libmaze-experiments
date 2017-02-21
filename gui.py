@@ -23,7 +23,7 @@ class Renderer(object):
         HUE = 1,
         HUE_0_5 = 2,
         HUE_2 = 3,
-        HUE_10 = 4,
+        HUE_5 = 4,
         RANDOM = 5
 
     def __init__(self, maze, cells_size, num_initial_cells, color_walls, color_transition):
@@ -131,12 +131,12 @@ class Renderer(object):
         # type: () -> None
 
         if self._color_transition in {Renderer.ColorTransition.HUE, Renderer.ColorTransition.HUE_0_5,
-                                      Renderer.ColorTransition.HUE_2, Renderer.ColorTransition.HUE_10}:
+                                      Renderer.ColorTransition.HUE_2, Renderer.ColorTransition.HUE_5}:
             if self._color_transition is Renderer.ColorTransition.HUE_0_5 and random.randint(0, 1) is 0:
                 return  # Average is one of two.
 
-            if self._color_transition is Renderer.ColorTransition.HUE_10:
-                num_iterations = 10
+            if self._color_transition is Renderer.ColorTransition.HUE_5:
+                num_iterations = 5
             elif self._color_transition is Renderer.ColorTransition.HUE_2:
                 num_iterations = 2
             else:
