@@ -31,6 +31,7 @@ class Renderer(object):
 
         self._window = pyglet.window.Window(fullscreen=True)  # type: pyglet.window.Window
         self._cells_size = cells_size  # type: int
+        self._num_initial_cells = num_initial_cells  # type: int
         self._color_transition = color_transition  # type: Renderer.ColorTransition
         self._width = maze.width() * 2 + 1  # type: int
         self._height = maze.height() * 2 + 1  # type: int
@@ -49,9 +50,16 @@ class Renderer(object):
             spaces = 0
         self._maze = maze.export_to_full_grid(spaces, walls)  # type: List[List[int]]
 
+        # Get the list of all the walls.
+        self._walls = set()  # type: Set[Tuple[int, int]]
+        for y in range(self._height):
+            for x in range(self._width):
+                if self._maze[x][y] is 0:
+                    self._walls.add((x, y))
+
         # Pick random cells.
         self._frontier = set()  # type: Set[Tuple[int, int]]
-        for i in range(num_initial_cells):
+        for _ in range(num_initial_cells):
             self._frontier.add((random.randrange(walls, self._width, 2), random.randrange(walls, self._height, 2)))
 
         # Pick a random color.
@@ -83,6 +91,7 @@ class Renderer(object):
     def _add_cell(self, x, y):
         # type: (int, int) -> None
 
+        # TODO: Use Pyglet's origin instead of changing it.
         # Put the origin to the top left (reverse Y-axis).
         y = self._height - y
         vertices = tuple(n * self._cells_size for n in (x, y, x + 1, y, x + 1, y - 1, x, y - 1))
@@ -99,6 +108,7 @@ class Renderer(object):
             next_cells = set()
             for x, y in self._frontier:
                 self._maze[x][y] = 1
+                self._walls.remove((x, y))
                 self._add_cell(x, y)
                 if x > 0 and self._maze[x - 1][y] is 0:
                     next_cells.add((x - 1, y))
@@ -108,10 +118,14 @@ class Renderer(object):
                     next_cells.add((x, y - 1))
                 if y < self._height - 1 and self._maze[x][y + 1] is 0:
                     next_cells.add((x, y + 1))
-            self._frontier = next_cells
+            self._frontier = next_cells - self._frontier  # Do not add the cells that have been already dealt with.
             self._next_color()
         else:
-            pyglet.clock.unschedule(self._flood)
+            if self._walls:  # If there are still cells left (isolated areas), start a new frontier.
+                while len(self._frontier) < min(self._num_initial_cells, len(self._walls)):
+                    self._frontier.add(random.choice(tuple(self._walls)))
+            else:
+                pyglet.clock.unschedule(self._flood)
 
     def _next_color(self):
         # type: () -> None

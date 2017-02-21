@@ -43,4 +43,4 @@ elif choice is 7:
 else:
     raise RuntimeError('You stupid!')
 
-Renderer(maze, cells_size, 1, False, Renderer.ColorTransition.HUE).run()
+Renderer(maze, cells_size, 4, True, Renderer.ColorTransition.HUE).run()
