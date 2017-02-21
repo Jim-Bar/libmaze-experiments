@@ -18,7 +18,7 @@ elif choice is 4:
 elif choice is 5:
     maze = Passage.run(width, height, [None, (0, 0), (width - 1, height - 1)])
 elif choice is 6:
-    maze = Braid.run(width, height)
+    maze = Braid.run(width, height, [None, (0, 0), RecursiveBackTracker, 0.1])
 elif choice is 7:
     # 'J'.
     sub_maze_1 = RecursiveBackTracker.run(30, 10), [(0, 0, Maze.Direction.LEFT, True)], (30, 30)

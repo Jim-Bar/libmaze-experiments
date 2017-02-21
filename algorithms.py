@@ -26,20 +26,25 @@ class Braid(object):
     """
     A maze with no dead ends. An algorithm is provided to generate an first maze whose dead ends will be removed. If no
     algorithm is provided, it defaults to RecursiveBackTracker.
+
+    This algorithm can also be used to make partial braid mazes. The percentage of the dead ends that will be removed
+    can be provided.
     """
 
     @staticmethod
     def run(width, height, parameters=None):
         # type: (int, int, Any) -> Maze
 
-        # TODO: Parameters here are special: (maze, (start_x, start_y), maze_algorithm)
-        # TODO: Do not erase sub mazes?
+        # TODO: Parameters here are special: (maze, (start_x, start_y), maze_algorithm, percentage)
+        # TODO: Do not erase sub mazes? Start?
         if parameters:
             maze_algorithm = parameters[2]
+            percentage = parameters[3]  # FIXME: Name?
         else:
             maze_algorithm = RecursiveBackTracker
+            percentage = 1
 
-        maze = maze_algorithm.run(width, height, parameters)
+        maze = maze_algorithm.run(width, height)
 
         # Reset all the cells as unvisited.
         for y in range(height):
@@ -57,7 +62,7 @@ class Braid(object):
                     connected_directions.add(direction)
 
             # If the current cell is a dead end or is completely closed, make a new passage.
-            if len(connected_directions) <= 1:
+            if len(connected_directions) <= 1 and random.random() <= percentage:
                 other_directions = set(Maze.Direction)
                 if len(connected_directions) == 1:  # Prefer the facing direction.
                     opened_direction = connected_directions.pop()
