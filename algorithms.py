@@ -248,3 +248,82 @@ class Room(Algorithm):
         # type: (int, int, Any) -> Maze
 
         return Maze(width, height, False, True)
+
+
+class Spiral(Algorithm):
+    """
+    A spiral with one, two, three or four exits. The spiral can be rectangular and the positions of the exits can be
+    chosen.
+    """
+    # TODO: Improve, 13x14 not well supported, 2 or 3 exits not well supported.
+
+    @staticmethod
+    def run(width, height, parameters=None):
+        # type: (int, int, Any) -> Maze
+
+        if not parameters:
+            raise RuntimeError('{} needs positions of the exits'.format(Passage.__name__))
+
+        maze = Maze(width, height, True, False)
+
+        # TODO: Parameters here are special: (maze, [(exit1_x, exit1_y), (exit2_x, exit2_y), ...], is_clockwise)
+        exits = parameters[1]
+        is_clockwise = parameters[2]
+
+        if is_clockwise:
+            directions = [Maze.Direction.LEFT, Maze.Direction.UP, Maze.Direction.RIGHT, Maze.Direction.DOWN]
+        else:
+            directions = [Maze.Direction.LEFT, Maze.Direction.DOWN, Maze.Direction.RIGHT, Maze.Direction.UP]
+
+        # Heads of the passages, with the directions: (x, y, direction_index).
+        front_cells = list()
+
+        # Find the directions of the initial front cells.
+        for exit_x, exit_y in exits:
+            if exit_x is 0 and exit_y is 0:
+                if is_clockwise:
+                    front_cells.append((exit_x, exit_y, 2))
+                else:
+                    front_cells.append((exit_x, exit_y, 1))
+            elif exit_x is 0 and exit_y is height - 1:
+                if is_clockwise:
+                    front_cells.append((exit_x, exit_y, 1))
+                else:
+                    front_cells.append((exit_x, exit_y, 2))
+            elif exit_x is width - 1 and exit_y is height - 1:
+                if is_clockwise:
+                    front_cells.append((exit_x, exit_y, 0))
+                else:
+                    front_cells.append((exit_x, exit_y, 3))
+            elif exit_x is width - 1 and exit_y is 0:
+                if is_clockwise:
+                    front_cells.append((exit_x, exit_y, 3))
+                else:
+                    front_cells.append((exit_x, exit_y, 0))
+            else:
+                raise RuntimeError('Invalid exit position (must be a corner): ({}, {})'.format(exit_x, exit_y))
+            maze.cell(exit_x, exit_y).set_meta(True)
+
+        while front_cells:
+            new_front_cells = list()
+            for x, y, direction_index in front_cells:
+                cell = maze.cell(x, y)
+                # If the passage can continue forward, just continue.
+                if cell.has_neighbor(directions[direction_index]) and \
+                        not cell.get_neighbor(directions[direction_index]).get_meta():
+                    cell.open(directions[direction_index])
+                    cell.get_neighbor(directions[direction_index]).set_meta(True)
+                    new_x = cell.get_neighbor(directions[direction_index]).x()
+                    new_y = cell.get_neighbor(directions[direction_index]).y()
+                    new_front_cells.append((new_x, new_y, direction_index))
+                # Otherwise, turn if there are still available direction.
+                # TODO: Don't do it more than once? Could fix some bad behavior (e.g. 13x14, ...).
+                elif True in [cell.has_neighbor(direction) and not cell.get_neighbor(direction).get_meta()
+                              for direction in directions]:
+                    new_front_cells.append((x, y, (direction_index + 1) % len(directions)))
+                # Otherwise, join other passages excepted if there is only one passage.
+                elif len(exits) > 1:
+                    cell.open(directions[direction_index])
+            front_cells = new_front_cells
+
+        return maze
