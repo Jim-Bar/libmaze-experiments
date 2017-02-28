@@ -1,4 +1,4 @@
-from algorithms import Braid, HuntAndKill, Labyrinth, Passage, RecursiveBackTracker, Room, Spiral
+from algorithms import Braid, Frontier, HuntAndKill, Labyrinth, Passage, RecursiveBackTracker, Room, Spiral
 from gui import Renderer
 from maze import Maze
 
@@ -22,6 +22,8 @@ elif choice is 6:
 elif choice is 7:
     maze = Spiral.run(width, height, [None, [(0, 0), (0, height - 1), (width - 1, height - 1), (width - 1, 0)], True])
 elif choice is 8:
+    maze = Frontier.run(width, height)
+elif choice is 9:
     # 'J'.
     sub_maze_1 = RecursiveBackTracker.run(30, 10), [(0, 0, Maze.Direction.LEFT, True)], (30, 30)
     sub_maze_2 = RecursiveBackTracker.run(10, 30), [(0, 0, Maze.Direction.UP, True)], (40, 40)

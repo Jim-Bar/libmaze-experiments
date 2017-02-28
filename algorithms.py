@@ -85,6 +85,70 @@ class Braid(object):
         return maze
 
 
+class Frontier(Algorithm):
+    """
+    Randomly flood the space.
+    """
+
+    @staticmethod
+    def run(width, height, parameters=None):
+        # type: (int, int, Any) -> Maze
+
+        if parameters:
+            maze = parameters[0]
+            initial_cell = maze.cell(parameters[1][0], parameters[1][1])
+        else:
+            maze = Maze(width, height, True, False)
+            initial_cell = maze.cell(random.randrange(width), random.randrange(height))
+
+        initial_cell.set_meta(True)
+        frontier = [initial_cell]
+        tank = set()
+
+        while tank or frontier:
+            # As some directions are ignored, some cells could have been visited but are not. And because some
+            # directions are ignored, not all the space is visited. The tank is the list of cells that could have been
+            # visited but have been ignored. Some of them have actually been visited by another path, so those are
+            # removed.
+            while not frontier and tank:
+                cell = tank.pop()
+                if not cell.get_meta():
+                    # Connect to a random direction that have already been visited.
+                    directions = [direction for direction in Maze.Direction]
+                    random.shuffle(directions)
+                    while directions and not cell.get_meta():
+                        direction = directions.pop()
+                        if cell.has_neighbor(direction) and cell.get_neighbor(direction).get_meta():
+                            cell.open(direction)
+                            cell.set_meta(True)
+                            frontier.append(cell)
+
+            new_frontier = list()
+            while frontier:
+                # Randomly choose a cell from the frontier.
+                cell = random.choice(frontier)
+                frontier.remove(cell)
+
+                # Randomly choose directions to explore.
+                directions = [direction for direction in Maze.Direction]
+                random.shuffle(directions)
+                num_directions = random.randint(0, 4)
+                directions = directions[:num_directions]
+
+                for direction in directions:
+                    if cell.has_neighbor(direction) and not cell.get_neighbor(direction).get_meta():
+                        cell.open(direction)
+                        cell.get_neighbor(direction).set_meta(True)
+                        new_frontier.append(cell.get_neighbor(direction))
+
+                for direction in Maze.Direction:
+                    if direction not in directions and cell.has_neighbor(direction) and not cell.get_neighbor(direction).get_meta():
+                        tank.add(cell.get_neighbor(direction))
+            frontier = new_frontier
+
+        return maze
+
+
 class HuntAndKill(Algorithm):
     """
     Variation of the Hunt and Kill algorithm. When a path is complete, instead of looking from the top left for starting
