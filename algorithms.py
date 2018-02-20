@@ -88,6 +88,9 @@ class Braid(object):
 class Frontier(Algorithm):
     """
     Randomly flood the space.
+
+    Note that this algorithm can add patches of cells to sub-mazes or neighboring mazes. That is due to the cells in the
+    tank which are connected to cells which have already been visited (but sometimes by other algorithms/mazes).
     """
 
     @staticmethod
