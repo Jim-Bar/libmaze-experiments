@@ -1,12 +1,12 @@
 import random
 import sys
 
-from maze import Maze
+from maze import Cell, Maze
 
 try:
-    from typing import Any, Callable, Dict, List, Set, Tuple
+    from typing import Any, Callable, Dict, List, NoneType, Set, Tuple, Union
 except ImportError:
-    Any, Callable, Dict, List, Set, Tuple = None, None, None, None, None, None
+    Any, Callable, Dict, List, NoneType, Set, Tuple, Union = None, None, None, None, None, None, None, None
 
 
 class Algorithm(object):
@@ -225,6 +225,167 @@ class Labyrinth(Algorithm):
                     break
 
         return maze
+
+
+class Labyrinth2(Algorithm):
+    """
+    Create a long single path which fills all the space.
+    """
+
+    class Expansion(object):
+        """
+        TODO
+
+        If :meth:`is_possible` returns ``False``, the behaviour of all other methods is undefined. They must not be
+        called in that case.
+        """
+
+        def __init__(self, origin_cell, direction, perpendicular_direction):
+            # type: (Cell, Maze.Direction, Maze.Direction) -> None
+
+            self._direction = direction  # type: Maze.Direction
+            self._origin = origin_cell  # type: Cell
+            self._origin_expanded = None  # type: Union[Cell, NoneType]
+            self._paired = None  # type: Union[Cell, NoneType]
+            self._paired_expanded = None  # type: Union[Cell, NoneType]
+            self._perpendicular = perpendicular_direction  # type: Maze.Direction
+            self._is_possible = self._resolve()  # type: bool
+
+        def do_expansion(self):
+            # type: () -> None
+
+            self._origin.close(self._direction)
+            self._origin.open(self._perpendicular)
+            self._paired.open(self._perpendicular)
+            self._origin_expanded.open(self._direction)
+            self._origin_expanded.set_meta(True)
+            self._paired_expanded.set_meta(True)
+
+        def get_cells(self):
+            # type: () -> Set[Cell]
+
+            return {self._origin, self._paired, self._origin_expanded, self._paired_expanded}
+
+        def is_possible(self):
+            # type: () -> bool
+
+            return self._is_possible
+
+        def _resolve(self):
+            # type: () -> bool
+
+            # Select paired cell.
+            if self._origin.has_neighbor(self._direction) and self._origin.get_neighbor(self._direction).get_meta() and self._origin.is_open(self._direction):
+                self._paired = self._origin.get_neighbor(self._direction)
+            else:
+                return False
+
+            # Select first expansion cell.
+            if self._origin.has_neighbor(self._perpendicular) and not self._origin.get_neighbor(self._perpendicular).get_meta():
+                self._origin_expanded = self._origin.get_neighbor(self._perpendicular)
+            else:
+                return False
+
+            # Select second expansion cell.
+            if self._paired.has_neighbor(self._perpendicular) and not self._paired.get_neighbor(self._perpendicular).get_meta():
+                self._paired_expanded = self._paired.get_neighbor(self._perpendicular)
+            else:
+                return False
+
+            # Check that the expanded cells are at even distance from the edges or cells of the paths.
+            if not Labyrinth2._is_even(self._origin_expanded, self._direction.opposite()):
+                return False
+            if not Labyrinth2._is_even(self._paired_expanded, self._direction):
+                return False
+
+            return True
+
+    @staticmethod
+    def run(width, height, parameters=None):
+        # type: (int, int, Any) -> Maze
+
+        # FIXME: support that. Plus, only even dimensions are supported.
+        if parameters:
+            raise RuntimeError('parameters not supported')
+
+        maze = Maze(width, height, True, False)
+        initial_cell = maze.cell(0, 0)
+
+        frontier = Labyrinth2._initial_path(initial_cell)
+        while frontier:
+            random_cell = random.choice(list(frontier))  # FIXME: Write a RandomSet class (pop fully random)?
+            frontier.discard(random_cell)
+            expansions = Labyrinth2._find_expansions(random_cell)
+            if expansions:
+                expansion = random.choice(list(expansions))
+                expansion.do_expansion()
+                for cell in expansion.get_cells():
+                    if Labyrinth2._is_frontier(cell):
+                        frontier.add(cell)
+                    else:
+                        frontier.discard(cell)
+
+        # FIXME: Delete, this is debug code.
+        for x in range(width):
+            for y in range(height):
+                if not maze.cell(x, y).get_meta():
+                    print('Cell {} has been forgotten'.format(maze.cell(x, y)))
+
+        return maze
+
+    @staticmethod
+    def _initial_path(cell):
+        # type: (Cell) -> Set[Cell]
+
+        directions = set()
+        for direction in Maze.Direction:
+            if cell.has_neighbor(direction):
+                directions.add(direction)
+
+        direction = random.choice(list(directions))
+        frontier = {cell}
+        cell.set_meta(True)
+        while cell.has_neighbor(direction):
+            cell.open(direction)
+            cell = cell.get_neighbor(direction)
+            cell.set_meta(True)
+            frontier.add(cell)
+
+        return frontier
+
+    @staticmethod
+    def _is_even(cell, direction):
+        # type: (Cell, Maze.Direction) -> bool
+
+        count = 0
+        while cell.has_neighbor(direction) and not cell.get_neighbor(direction).get_meta():
+            count += 1
+            cell = cell.get_neighbor(direction)
+
+        return count % 2 is 0
+
+    @staticmethod
+    def _is_frontier(cell):
+        # type: (Cell) -> bool
+
+        for direction in Maze.Direction:
+            if cell.has_neighbor(direction) and not cell.get_neighbor(direction).get_meta():
+                return True
+
+        return False
+
+    @staticmethod
+    def _find_expansions(cell):
+        # type: (Cell) -> Set[Labyrinth2.Expansion]
+
+        expansions = set()
+        for direction in Maze.Direction:
+            for perpendicular_direction in direction.perpendiculars():
+                expansion = Labyrinth2.Expansion(cell, direction, perpendicular_direction)
+                if expansion.is_possible():
+                    expansions.add(expansion)
+
+        return expansions
 
 
 class Passage(Algorithm):

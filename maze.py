@@ -67,6 +67,15 @@ class Cell(object):
 
         return self._neighbors[direction][1].is_open()
 
+    def get_direction_with(self, other_cell):
+        # type: (Cell) -> Maze.Direction
+
+        for direction in Maze.Direction:
+            if self.has_neighbor(direction) and self.get_neighbor(direction) is other_cell:
+                return direction
+
+        raise ValueError('Cells {} and {} are not neighbors'.format(self, other_cell))
+
     def get_meta(self):
         # type: () -> Any
 
@@ -76,6 +85,11 @@ class Cell(object):
         # type: (Maze.Direction) -> Cell
 
         return self._neighbors[direction][0]
+
+    def get_neighbors(self):
+        # type: () -> Set[Cell]
+
+        return {cell for cell, link in self._neighbors.items()}
 
     def has_neighbor(self, direction):
         # type: (Maze.Direction) -> bool
@@ -137,6 +151,14 @@ class Maze(object):
                 return Maze.Direction.LEFT
             elif self is Maze.Direction.DOWN:
                 return Maze.Direction.UP
+
+        def perpendiculars(self):
+            # type: (Maze.Direction) -> Set[Maze.Direction]
+
+            if self in {Maze.Direction.LEFT, Maze.Direction.RIGHT}:
+                return {Maze.Direction.UP, Maze.Direction.DOWN}
+            else:
+                return {Maze.Direction.LEFT, Maze.Direction.RIGHT}
 
     # TODO: Make a class out of 'sub_mazes'.
     def __init__(self, width, height, carving, meta=None, sub_mazes=None):
