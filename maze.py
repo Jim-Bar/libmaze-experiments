@@ -1,4 +1,5 @@
 import enum
+import random
 
 try:
     from typing import Any, Callable, Dict, List, Set, Tuple
@@ -152,6 +153,11 @@ class Maze(object):
             elif self is Maze.Direction.DOWN:
                 return Maze.Direction.UP
 
+        def others(self):
+            # type: () -> Set[Maze.Direction]
+
+            return set(Maze.Direction) - {self}
+
         def perpendiculars(self):
             # type: (Maze.Direction) -> Set[Maze.Direction]
 
@@ -159,6 +165,14 @@ class Maze(object):
                 return {Maze.Direction.UP, Maze.Direction.DOWN}
             else:
                 return {Maze.Direction.LEFT, Maze.Direction.RIGHT}
+
+        @staticmethod
+        def shuffle():
+            # type: () -> List[Maze.Direction]
+
+            directions = list(Maze.Direction)
+            random.shuffle(directions)
+            return directions
 
     # TODO: Make a class out of 'sub_mazes'.
     def __init__(self, width, height, carving, meta=None, sub_mazes=None):

@@ -85,7 +85,9 @@ class Renderer(object):
             if symbol == pyglet.window.key.ESCAPE or symbol == pyglet.window.key.Q:
                 self._window.close()
 
-        pyglet.clock.schedule_interval(self._flood, 1 / 60)
+        #pyglet.clock.schedule_interval(self._flood, 1 / 60)
+        while self._flood(0):
+            pass
         pyglet.app.run()
 
     def _add_cell(self, x, y):
@@ -125,7 +127,10 @@ class Renderer(object):
                 while len(self._frontier) < min(self._num_initial_cells, len(self._walls)):
                     self._frontier.add(random.choice(tuple(self._walls)))
             else:
-                pyglet.clock.unschedule(self._flood)
+                pass #pyglet.clock.unschedule(self._flood)
+                return False
+
+        return True
 
     def _next_color(self):
         # type: () -> None

@@ -4,10 +4,12 @@ import sys
 from maze import Cell, Maze
 
 try:
-    from typing import Any, Callable, Dict, List, NoneType, Set, Tuple, Union
+    from typing import Any, Callable, Dict, List, Set, Tuple, Union
 except ImportError:
-    Any, Callable, Dict, List, NoneType, Set, Tuple, Union = None, None, None, None, None, None, None, None
+    Any, Callable, Dict, List, Set, Tuple, Union = None, None, None, None, None, None, None
 
+
+# FIXME: Write a RandomSet class (pop fully random)?
 
 class Algorithm(object):
     """
@@ -245,9 +247,9 @@ class Labyrinth2(Algorithm):
 
             self._direction = direction  # type: Maze.Direction
             self._origin = origin_cell  # type: Cell
-            self._origin_expanded = None  # type: Union[Cell, NoneType]
-            self._paired = None  # type: Union[Cell, NoneType]
-            self._paired_expanded = None  # type: Union[Cell, NoneType]
+            self._origin_expanded = None  # type: Union[Cell, None]
+            self._paired = None  # type: Union[Cell, None]
+            self._paired_expanded = None  # type: Union[Cell, None]
             self._perpendicular = perpendicular_direction  # type: Maze.Direction
             self._is_possible = self._resolve()  # type: bool
 
@@ -291,6 +293,31 @@ class Labyrinth2(Algorithm):
                 self._paired_expanded = self._paired.get_neighbor(self._perpendicular)
             else:
                 return False
+            """
+            # Check that the expanded cells are at even distance from the edges or cells of the paths.
+            is_even = Labyrinth2._is_even(self._origin_expanded, self._direction.opposite()) and Labyrinth2._is_even(self._paired_expanded, self._direction)
+
+            # Check that in the direction of the expansion, the counts are either all evens or all odds.
+            evens_or_odds = Labyrinth2._is_even(self._origin_expanded, self._perpendicular) is Labyrinth2._is_even(self._paired_expanded, self._perpendicular)
+
+            # Check if the expansion is stuck again a wall.
+            is_stuck_origin = Labyrinth2._is_zero(self._origin_expanded, self._direction.opposite())
+            is_stuck_paired = Labyrinth2._is_zero(self._paired_expanded, self._direction)
+            is_stuck = is_stuck_origin or is_stuck_paired
+
+            # Check if the expansion is surrounded (stuck from both sides).
+            is_surrounded = is_stuck_origin and is_stuck_paired
+
+            return ((is_even or is_stuck) and evens_or_odds) or is_surrounded
+            """
+            # Check if the expansion is surrounded (stuck from both sides).
+            if Labyrinth2._is_zero(self._origin_expanded, self._direction.opposite()) and Labyrinth2._is_zero(self._paired_expanded, self._direction):
+                return True
+
+            # In the direction of the expansion, it is fine if the expansion completely shuts off a corridor and goes along a wall.
+            if Labyrinth2._is_zero(self._origin_expanded, self._perpendicular) and Labyrinth2._is_zero(self._paired_expanded, self._perpendicular) \
+                    and (Labyrinth2._is_zero(self._origin_expanded, self._direction.opposite() or Labyrinth2._is_zero(self._paired_expanded, self._direction))):
+                return True
 
             # Check that the expanded cells are at even distance from the edges or cells of the paths.
             if not Labyrinth2._is_even(self._origin_expanded, self._direction.opposite()):
@@ -298,7 +325,24 @@ class Labyrinth2(Algorithm):
             if not Labyrinth2._is_even(self._paired_expanded, self._direction):
                 return False
 
+            # Check that in the direction of the expansion, the counts are either all evens or all odds.
+            if Labyrinth2._is_even(self._origin_expanded, self._perpendicular) is not Labyrinth2._is_even(self._paired_expanded, self._perpendicular):
+                return False
+
             return True
+
+        @staticmethod
+        def _distance_one(cell, direction):
+            # type: (Cell, Maze.Direction) -> bool
+
+            if not cell.has_neighbor(direction):
+                return False
+
+            neighbor = cell.get_neighbor(direction)
+            if neighbor.get_meta():
+                return False
+
+            return not neighbor.has_neighbor(direction) or neighbor.get_neighbor(direction).get_meta()
 
     @staticmethod
     def run(width, height, parameters=None):
@@ -311,27 +355,30 @@ class Labyrinth2(Algorithm):
         maze = Maze(width, height, True, False)
         initial_cell = maze.cell(0, 0)
 
-        frontier = Labyrinth2._initial_path(initial_cell)
-        while frontier:
-            random_cell = random.choice(list(frontier))  # FIXME: Write a RandomSet class (pop fully random)?
-            frontier.discard(random_cell)
-            expansions = Labyrinth2._find_expansions(random_cell)
-            if expansions:
-                expansion = random.choice(list(expansions))
-                expansion.do_expansion()
-                for cell in expansion.get_cells():
-                    if Labyrinth2._is_frontier(cell):
-                        frontier.add(cell)
-                    else:
-                        frontier.discard(cell)
+        try:
+            frontier = Labyrinth2._initial_path(initial_cell)
+            tank = set()
+            while frontier or tank:
+                if not frontier:
+                    frontier.update(tank)
+                    tank.clear()
+                random_cell = random.choice(list(frontier))
+                expansion = Labyrinth2._find_expansion(random_cell)
+                if expansion:
+                    expansion.do_expansion()
+                    for cell in expansion.get_cells():
+                        if Labyrinth2._is_frontier(cell):
+                            frontier.add(cell)
+                        else:
+                            frontier.discard(cell)
+                else:
+                    frontier.discard(random_cell)
+                    if Labyrinth2._is_frontier(random_cell):
+                        tank.add(random_cell)
+        except KeyboardInterrupt:
+            return maze, False
 
-        # FIXME: Delete, this is debug code.
-        for x in range(width):
-            for y in range(height):
-                if not maze.cell(x, y).get_meta():
-                    print('Cell {} has been forgotten'.format(maze.cell(x, y)))
-
-        return maze
+        return maze, True
 
     @staticmethod
     def _initial_path(cell):
@@ -375,17 +422,26 @@ class Labyrinth2(Algorithm):
         return False
 
     @staticmethod
-    def _find_expansions(cell):
-        # type: (Cell) -> Set[Labyrinth2.Expansion]
+    def _is_zero(cell, direction):
+        # type: (Cell, Maze.Direction) -> bool
 
-        expansions = set()
-        for direction in Maze.Direction:
+        if not cell.has_neighbor(direction):
+            return True
+
+        return cell.get_neighbor(direction).get_meta()
+
+    @staticmethod
+    def _find_expansion(cell):
+        # type: (Cell) -> Union[Labyrinth2.Expansion, None]
+
+        # Return the first expansion found. Lookup directions in a randomized order.
+        for direction in Maze.Direction.shuffle():  # TODO: Add a random() method to Maze.Direction returning an randomly ordered set.
             for perpendicular_direction in direction.perpendiculars():
                 expansion = Labyrinth2.Expansion(cell, direction, perpendicular_direction)
                 if expansion.is_possible():
-                    expansions.add(expansion)
+                    return expansion
 
-        return expansions
+        return None
 
 
 class Passage(Algorithm):
@@ -464,6 +520,54 @@ class RecursiveBackTracker(Algorithm):
             if cell.has_neighbor(direction) and not cell.get_neighbor(direction).get_meta():
                 cell.open(direction)
                 RecursiveBackTracker._recursive(cell.get_neighbor(direction))
+
+
+class RecursiveBackTracker2(Algorithm):
+    """
+    Variation of the Recursive Back Tracker algorithm which occupies half of the grid. It is "even".
+
+    TODO: Achieve the same thing with a regular Recursive Back Tracker algorithm and a smart grid/maze which handles
+    TODO: the "even" distribution itself. Algorithms could be combined.
+
+    This algorithm is a basis for the generation of labyrinths.
+    """
+
+    @staticmethod
+    def run(width, height, parameters=None):
+        # type: (int, int, Any) -> Maze
+
+        sys.setrecursionlimit(max(sys.getrecursionlimit(), width * height + 10))
+
+        if parameters:
+            maze = parameters[0]
+            initial_cell = maze.cell(parameters[1][0], parameters[1][1])
+        else:
+            maze = Maze(width, height, True, False)
+            initial_cell = maze.cell(random.randrange(width), random.randrange(height))
+
+        RecursiveBackTracker2._recursive(initial_cell, None, 0)
+
+        return maze
+
+    @staticmethod
+    def _recursive(cell, last_direction, count_since_last_turn):
+        # type: (Cell, Union[Maze.Direction, None], int) -> None
+
+        cell.set_meta(True)
+        if count_since_last_turn % 2 is 0:
+            directions = [direction for direction in Maze.Direction]
+            random.shuffle(directions)
+        else:
+            directions = {last_direction}
+        for direction in directions:
+            if cell.has_neighbor(direction) and not cell.get_neighbor(direction).get_meta():
+                neighbor = cell.get_neighbor(direction)
+                for neighbor_direction in direction.opposite().others():
+                    if neighbor.has_neighbor(neighbor_direction) and neighbor.get_neighbor(neighbor_direction).get_meta():
+                        break
+                else:
+                    cell.open(direction)
+                    RecursiveBackTracker2._recursive(cell.get_neighbor(direction), direction, count_since_last_turn + 1)
 
 
 class Room(Algorithm):
